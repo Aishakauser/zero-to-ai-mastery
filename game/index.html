@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zero → AI Mastery — Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script src="quest-data.js"></script>
+<style>
+  :root{
+    --bg:#150b2e; --bg2:#1f1145; --card:#271856; --card2:#321e6b; --slot:#1a0f3a;
+    --txt:#f3eeff; --mut:#b4a7e0; --line:#3d2a7a;
+    --pri:#a855f7; --pri2:#c084fc; --pink:#ec4899; --amber:#f59e0b; --cyan:#22d3ee;
+    --ok:#34d399; --bad:#fb7185; --gold:#fbbf24;
+    --disp:"Fredoka",system-ui,sans-serif; --sans:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--sans);color:var(--txt);min-height:100vh;
+    background:
+      radial-gradient(900px 500px at 90% -5%, #3a1d6e 0, transparent 55%),
+      radial-gradient(700px 500px at -10% 110%, #4a1d52 0, transparent 50%),
+      var(--bg);}
+  h1,h2,h3,.disp{font-family:var(--disp)}
+  button{font-family:inherit;cursor:pointer}
+  a{color:var(--pri2)}
+  /* top HUD */
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 20px;
+    background:rgba(21,11,46,.75);backdrop-filter:blur(10px);border-bottom:2px solid var(--line);position:sticky;top:0;z-index:30}
+  .logo{font-family:var(--disp);font-weight:700;font-size:18px;letter-spacing:.3px}
+  .logo b{color:var(--pri2)}
+  .hud{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .chip{display:flex;align-items:center;gap:7px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--disp);font-weight:600;font-size:13px}
+  .chip .big{font-size:15px}
+  .chip.level{border-color:var(--pri)} .chip.streak{border-color:var(--amber);color:#ffe9b0}
+  .xpwrap{display:flex;flex-direction:column;gap:3px;min-width:150px}
+  .xprow{display:flex;justify-content:space-between;font-size:11px;color:var(--mut);font-family:var(--disp);font-weight:600}
+  .bar{height:11px;border-radius:8px;background:var(--slot);overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--pink),var(--pri),var(--cyan));transition:width .5s}
+  .ghostbtn{background:var(--card2);border:2px solid var(--line);color:var(--mut);border-radius:12px;padding:7px 12px;font-family:var(--disp);font-weight:600;font-size:12.5px}
+  .ghostbtn:hover{color:var(--txt);border-color:var(--pri)}
+  .wrap{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 62px)}
+  /* quest map */
+  aside{padding:18px 14px 60px;border-right:2px solid var(--line);overflow-y:auto;max-height:calc(100vh - 62px)}
+  .maptrack{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--pri2);margin:16px 6px 10px;display:flex;align-items:center;gap:8px}
+  .maptrack:first-child{margin-top:0}
+  .maptrack.b{color:var(--amber)} .maptrack.f{color:var(--cyan)}
+  .node{position:relative;display:flex;align-items:center;gap:11px;padding:9px 11px;margin:0 0 7px 6px;border-radius:14px;cursor:pointer;border:2px solid transparent}
+  .node:before{content:"";position:absolute;left:-1px;top:-9px;height:9px;width:2px;background:var(--line)}
+  .node:first-of-type:before{display:none}
+  .node:hover{background:var(--card)} .node.active{background:var(--card);border-color:var(--pri)}
+  .node.locked{opacity:.5;cursor:not-allowed}
+  .orb{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:18px;
+    background:var(--slot);border:2px solid var(--line)}
+  .node.active .orb{border-color:var(--pri);box-shadow:0 0 0 4px rgba(168,85,247,.25)}
+  .node.done .orb{background:linear-gradient(135deg,var(--ok),#15a87a);border-color:var(--ok)}
+  .node .nm{font-family:var(--disp);font-weight:600;font-size:13.5px;line-height:1.2}
+  .node .sub{font-size:11px;color:var(--mut)}
+  .node .st{margin-left:auto;font-size:14px}
+  /* main */
+  main{padding:22px 26px 80px;overflow-y:auto;max-height:calc(100vh - 62px)}
+  .worldhdr{display:flex;align-items:center;gap:13px;margin-bottom:14px}
+  .worldhdr .wo{width:48px;height:48px;border-radius:14px;background:var(--card);border:2px solid var(--pri);display:flex;align-items:center;justify-content:center;font-size:24px}
+  .worldhdr h2{margin:0;font-size:21px}
+  .worldhdr .tk{font-size:12px;color:var(--mut);font-family:var(--disp);font-weight:600}
+  /* stage select strip */
+  .stages{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .stage{width:38px;height:38px;border-radius:11px;background:var(--slot);border:2px solid var(--line);color:var(--mut);
+    font-family:var(--disp);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+  .stage.cur{border-color:var(--pri);color:#fff;background:var(--card2)}
+  .stage.cleared{border-color:var(--ok);color:var(--ok)} .stage.locked{opacity:.4}
+  .stage:not(.locked){cursor:pointer}
+  /* challenge card */
+  .card{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:22px 24px;position:relative;transition:transform .15s}
+  .card.win{animation:pop .45s ease}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.012)}100%{transform:scale(1)}}
+  .badges{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .tagx{font-family:var(--disp);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.6px;padding:4px 11px;border-radius:9px;background:var(--card2);color:var(--pri2)}
+  .tagx.py{background:#3a2f08;color:#ffd34d} .tagx.js{background:#3a3008;color:#ffe08a}
+  .tagx.xp{background:#3a1530;color:#ffaed6}
+  .card h3{margin:0 0 4px;font-size:20px}
+  .brief{font-size:15px;line-height:1.65;color:#e7deff}
+  .brief code{font-family:var(--mono);font-size:.85em;background:var(--slot);padding:2px 6px;border-radius:6px;color:var(--cyan)}
+  .task{margin:14px 0;padding:11px 15px;background:var(--card2);border-left:4px solid var(--amber);border-radius:0 10px 10px 0;font-size:14px}
+  textarea.editor{width:100%;min-height:180px;background:var(--slot);color:#eafff4;border:2px solid var(--line);border-radius:14px;
+    padding:15px;font-family:var(--mono);font-size:14px;line-height:1.55;resize:vertical;tab-size:4}
+  textarea.editor:focus{outline:none;border-color:var(--pri)}
+  .mcq{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+  .opt{text-align:left;background:var(--slot);border:2px solid var(--line);color:var(--txt);padding:13px 15px;border-radius:13px;font-size:14.5px;transition:.12s}
+  .opt:hover{border-color:var(--pri2);transform:translateX(2px)} .opt.sel{border-color:var(--pri);background:var(--card2)}
+  .opt.right{border-color:var(--ok);background:rgba(52,211,153,.14)} .opt.wrong{border-color:var(--bad);background:rgba(251,113,133,.14)}
+  .row{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap}
+  .btn{background:linear-gradient(135deg,var(--pri),var(--pink));color:#fff;border:none;padding:12px 22px;border-radius:13px;font-family:var(--disp);font-weight:600;font-size:15px}
+  .btn:hover{filter:brightness(1.08)} .btn:active{transform:scale(.97)} .btn:disabled{filter:grayscale(.6) brightness(.8)}
+  .btn.ghost{background:var(--card2);border:2px solid var(--line);color:var(--mut)} .btn.ghost:hover{color:var(--txt);border-color:var(--pri)}
+  .pill{font-size:12px;color:var(--mut);font-family:var(--disp);font-weight:600}
+  .out{margin-top:15px;border-radius:13px;padding:14px 16px;font-family:var(--mono);font-size:13px;white-space:pre-wrap;display:none;border:2px solid}
+  .out.show{display:block}
+  .out.pass{background:rgba(52,211,153,.12);border-color:var(--ok);color:#9af2cf}
+  .out.fail{background:rgba(251,113,133,.12);border-color:var(--bad);color:#ffc0cb}
+  .out.info{background:rgba(168,85,247,.14);border-color:var(--pri);color:#dcc7ff}
+  .hint{margin-top:13px;font-size:13.5px;color:var(--mut);display:none;background:var(--slot);border-radius:12px;padding:12px 15px}
+  .hint.show{display:block} .hint b{color:var(--amber)} .hint .step{margin:5px 0}
+  .nav{display:flex;justify-content:space-between;margin-top:20px;gap:10px}
+  .float{position:absolute;right:24px;top:18px;font-family:var(--disp);font-weight:700;font-size:22px;color:var(--gold);opacity:0;pointer-events:none}
+  .float.go{animation:rise 1s ease forwards}
+  @keyframes rise{0%{opacity:0;transform:translateY(8px)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
+  .menutoggle{display:none}
+  .modal{position:fixed;inset:0;background:rgba(10,5,24,.86);display:none;align-items:center;justify-content:center;z-index:60;padding:20px}
+  .modal.show{display:flex}
+  .mcard{background:var(--card);border:3px solid var(--pri);border-radius:24px;padding:34px;max-width:460px;text-align:center}
+  .mcard .tro{font-size:58px;margin-bottom:6px}
+  .mcard h3{margin:0 0 8px;font-size:27px} .mcard p{color:var(--mut);line-height:1.6;font-size:14.5px}
+  .legend{font-size:12px;color:var(--mut);margin-top:16px;line-height:1.7}
+  @media(max-width:860px){
+    .wrap{grid-template-columns:1fr}
+    aside{position:fixed;left:0;top:62px;width:280px;max-width:84vw;background:var(--bg2);z-index:25;transform:translateX(-105%);transition:transform .25s;box-shadow:0 10px 50px rgba(0,0,0,.5)}
+    aside.open{transform:none}
+    .menutoggle{display:flex}
+    main{padding:18px 16px 70px}
+  }
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+  :focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <button class="ghostbtn menutoggle" id="menuBtn" aria-label="Toggle quest map">☰</button>
+  <span class="logo">⚔️ Zero → <b>AI Mastery</b></span>
+  <div class="hud">
+    <span class="chip level" id="rankChip" title="Your rank">🎖️ <span id="rank">Novice</span></span>
+    <div class="xpwrap"><div class="xprow"><span>XP</span><span id="xptext">0 / 0</span></div><div class="bar"><i id="xpbar"></i></div></div>
+    <span class="chip streak" id="streakChip" title="Solve streak">🔥 <span class="big" id="streak">0</span></span>
+    <button class="ghostbtn" id="reviewBtn">⏭ Next unsolved</button>
+    <button class="ghostbtn" id="resetBtn">↺ Reset</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <aside id="map" aria-label="Quest map"></aside>
+  <main>
+    <div class="worldhdr" id="worldhdr"></div>
+    <div class="stages" id="stages" aria-label="Stage select"></div>
+    <div id="cardSlot"></div>
+    <div class="nav"><button class="btn ghost" id="prevBtn">← Prev</button><button class="btn ghost" id="nextBtn">Next →</button></div>
+    <div class="legend">Clear a stage to unlock the next. Clear one stage in a world to unlock the next world. Build a streak by solving without a wrong answer. Python loads once on first run.</div>
+  </main>
+</div>
+
+<div class="modal" id="modal"><div class="mcard">
+  <div class="tro" id="mIcon">🎉</div><h3 id="mTitle">World cleared!</h3><p id="mBody"></p>
+  <button class="btn" id="mClose" style="margin-top:18px">Continue →</button>
+</div></div>
+
+<script>
+const WORLDS=[]; TRACKS.forEach(t=>t.worlds.forEach(w=>WORLDS.push(Object.assign({track:t.label,trackcls:t.cls},w))));
+const KEY='ztaim_progress_v2';
+let progress=load(); let cur={w:0,l:0}; let hintLevel=0; let streak=0;
+function load(){ try{ const r=JSON.parse(localStorage.getItem(KEY)); if(r) return r; }catch(e){} return {cleared:{},xp:0}; }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(progress)); }catch(e){} }
+const totalXP=WORLDS.reduce((s,w)=>s+w.levels.reduce((a,l)=>a+l.xp,0),0);
+const RANKS=[[0,'Novice'],[100,'Apprentice'],[250,'Builder'],[420,'Engineer'],[600,'Architect'],[totalXP,'AI Master']];
+function worldUnlocked(wi){ if(wi===0)return true; const p=WORLDS[wi-1]; return p.levels.some((_,li)=>progress.cleared[(wi-1)+'-'+li]); }
+function levelUnlocked(wi,li){ if(!worldUnlocked(wi))return false; if(li===0)return true; return !!progress.cleared[wi+'-'+(li-1)]; }
+function worldStatus(wi){ const t=WORLDS[wi].levels.length, d=WORLDS[wi].levels.filter((_,li)=>progress.cleared[wi+'-'+li]).length; return d===t?'done':(d>0?'partial':'none'); }
+function firstOpen(wi){ for(let li=0;li<WORLDS[wi].levels.length;li++) if(!progress.cleared[wi+'-'+li]&&levelUnlocked(wi,li)) return li; return 0; }
+
+function trackClass(label){ return label.indexOf('Track B')>=0?'b':(label.indexOf('Track A')>=0?'':'f'); }
+
+function renderMap(){
+  const m=document.getElementById('map'); m.innerHTML=''; let last=null;
+  WORLDS.forEach((w,wi)=>{
+    if(w.track!==last){ last=w.track; const h=document.createElement('div'); h.className='maptrack '+trackClass(w.track); h.textContent=w.track; m.appendChild(h); }
+    const un=worldUnlocked(wi), st=worldStatus(wi);
+    const total=w.levels.length, done=w.levels.filter((_,li)=>progress.cleared[wi+'-'+li]).length;
+    const n=document.createElement('div'); n.className='node'+(wi===cur.w?' active':'')+(st==='done'?' done':'')+(un?'':' locked');
+    n.setAttribute('role','button'); n.setAttribute('tabindex', un?'0':'-1');
+    n.innerHTML='<div class="orb">'+(un?w.icon:'🔒')+'</div><div><div class="nm">'+w.name+'</div><div class="sub">'+done+' / '+total+' cleared</div></div><div class="st">'+(st==='done'?'⭐':'')+'</div>';
+    if(un){ n.onclick=()=>{cur={w:wi,l:firstOpen(wi)};hintLevel=0;render();document.getElementById('map').classList.remove('open');};
+      n.onkeydown=e=>{if(e.key==='Enter'){n.onclick();}}; }
+    m.appendChild(n);
+  });
+}
+function renderHUD(){
+  document.getElementById('xpbar').style.width=(100*progress.xp/totalXP)+'%';
+  document.getElementById('xptext').textContent=progress.xp+' / '+totalXP;
+  let r=RANKS[0][1]; for(const x of RANKS) if(progress.xp>=x[0]) r=x[1];
+  document.getElementById('rank').textContent=r;
+  document.getElementById('streak').textContent=streak;
+}
+
+let selOpt=-1;
+function render(){
+  renderMap(); renderHUD();
+  const w=WORLDS[cur.w], l=w.levels[cur.l]; selOpt=-1;
+  const cleared=progress.cleared[cur.w+'-'+cur.l];
+  document.getElementById('worldhdr').innerHTML='<div class="wo">'+w.icon+'</div><div><div class="tk">'+w.track+'</div><h2>'+w.name+'</h2></div>';
+  const ss=document.getElementById('stages'); ss.innerHTML='';
+  w.levels.forEach((lv,li)=>{
+    const ul=levelUnlocked(cur.w,li), cl=progress.cleared[cur.w+'-'+li];
+    const s=document.createElement('div'); s.className='stage'+(li===cur.l?' cur':'')+(cl?' cleared':'')+(ul?'':' locked');
+    s.textContent=cl?'★':(li+1); s.title=lv.title;
+    if(ul){ s.onclick=()=>{cur={w:cur.w,l:li};hintLevel=0;render();}; s.setAttribute('tabindex','0'); s.setAttribute('role','button'); s.setAttribute('aria-label','Stage '+(li+1)+': '+lv.title);
+      s.onkeydown=e=>{if(e.key==='Enter')s.onclick();}; }
+    ss.appendChild(s);
+  });
+  const langtag=l.type==='py'?'<span class="tagx py">🐍 Python</span>':l.type==='js'?'<span class="tagx js">JS</span>':'';
+  const langnote=l.type==='js'?'Runs real JavaScript':l.type==='py'?'Runs real Python (Pyodide)':l.type==='pattern'?'Checked vs required commands':'Concept check';
+  const runlabel=l.type==='mcq'?'Submit answer':l.type==='py'?'▶ Run Python':'▶ Run & check';
+  let card='<div class="card" id="card"><div class="float" id="float"></div>'+
+    '<div class="badges"><span class="tagx">Stage '+(cur.l+1)+'/'+w.levels.length+'</span><span class="tagx xp">+'+l.xp+' XP</span>'+langtag+(cleared?'<span class="tagx" style="background:#0c3a28;color:#8ff0c8">✓ cleared</span>':'')+
+    ' <a href="../modules/'+l.module+'" target="_blank" style="margin-left:auto;font-family:var(--disp);font-weight:600;font-size:12px">📖 Open module</a></div>'+
+    '<h3>'+l.title+'</h3><div class="brief">'+l.brief+'</div>';
+  if(l.task) card+='<div class="task">🎯 '+l.task+'</div>';
+  if(l.type==='mcq'){ card+='<div class="mcq" id="mcq">'+l.options.map((o,i)=>'<button class="opt" data-i="'+i+'">'+o+'</button>').join('')+'</div>'; }
+  else { card+='<textarea class="editor" id="editor" spellcheck="false" aria-label="Code editor">'+(l.starter||'').replace(/</g,'&lt;')+'</textarea>'; }
+  card+='<div class="row"><button class="btn" id="checkBtn">'+runlabel+'</button>'+
+    '<button class="btn ghost" id="hintBtn">💡 Hint</button>'+
+    (l.type!=='mcq'?'<button class="btn ghost" id="resetCode">↺ Reset</button>':'')+
+    '<span class="pill">'+langnote+'</span></div>'+
+    '<div class="hint" id="hint"></div><div class="out" id="out"></div></div>';
+  document.getElementById('cardSlot').innerHTML=card;
+  document.querySelector('main').scrollTop=0;
+
+  if(l.type==='mcq'){ document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{document.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel'));b.classList.add('sel');selOpt=+b.dataset.i;}); }
+  document.getElementById('checkBtn').onclick=check;
+  document.getElementById('hintBtn').onclick=showHint;
+  const rc=document.getElementById('resetCode'); if(rc) rc.onclick=()=>{document.getElementById('editor').value=l.starter||'';};
+}
+
+function showHint(){
+  const l=WORLDS[cur.w].levels[cur.l], h=document.getElementById('hint');
+  hintLevel=Math.min(hintLevel+1,l.hints.length); h.classList.add('show');
+  h.innerHTML='<b>Hint '+hintLevel+'/'+l.hints.length+':</b>'+l.hints.slice(0,hintLevel).map(x=>'<div class="step">• '+x+'</div>').join('');
+}
+function nav(d){
+  let w=cur.w,l=cur.l+d;
+  if(l<0){ if(w>0){w--;l=WORLDS[w].levels.length-1;} else l=0; }
+  else if(l>=WORLDS[w].levels.length){ if(w<WORLDS.length-1){w++;l=0;} else l=WORLDS[w].levels.length-1; }
+  if(!levelUnlocked(w,l)){ flash('🔒 Locked — clear the previous stage first.','fail'); return; }
+  cur={w,l}; hintLevel=0; render();
+}
+function nextUnsolved(){
+  for(let wi=0;wi<WORLDS.length;wi++) for(let li=0;li<WORLDS[wi].levels.length;li++)
+    if(levelUnlocked(wi,li)&&!progress.cleared[wi+'-'+li]){ cur={w:wi,l:li}; hintLevel=0; render(); return; }
+  flash('🏆 Everything unlocked is solved!','info');
+}
+function award(){ const k=cur.w+'-'+cur.l; if(!progress.cleared[k]){ progress.cleared[k]=true; progress.xp+=WORLDS[cur.w].levels[cur.l].xp; save(); } }
+
+let pyodide=null;
+async function getPy(){ if(pyodide) return pyodide; flash('⏳ Loading Python runtime (first time only)…','info'); pyodide=await loadPyodide(); return pyodide; }
+
+function check(){
+  const l=WORLDS[cur.w].levels[cur.l];
+  if(l.type==='mcq'){
+    if(selOpt<0){ flash('Pick an option first.','fail'); return; }
+    const opts=document.querySelectorAll('.opt');
+    if(selOpt===l.answer){ opts[selOpt].classList.add('right'); pass(); }
+    else { opts[selOpt].classList.add('wrong'); opts[l.answer].classList.add('right'); streak=0; renderHUD(); flash('Not quite — the highlighted one is correct. Read a hint, then move on.','fail'); }
+    return;
+  }
+  const code=document.getElementById('editor').value;
+  if(l.type==='pattern'){ l.must.every(rx=>rx.test(code))?pass():(brk(),flash('Not matching yet — open a hint for the exact commands.','fail')); return; }
+  if(l.type==='js'){ runJS(code,l.test).then(r=>{
+    if(r.error){ brk(); flash('💥 Error: '+r.error,'fail'); return; }
+    const g=r.logs.join('\n').trim(), e=String(l.expected).trim();
+    g===e?pass('Output: '+g):(brk(),flash('Output was:\n  '+(g||'(nothing logged)')+'\nExpected:\n  '+e,'fail'));
+  }); return; }
+  if(l.type==='py'){ const b=document.getElementById('checkBtn'); b.disabled=true;
+    runPy(code).then(r=>{ b.disabled=false;
+      if(r.error){ brk(); flash('💥 Python error: '+r.error,'fail'); return; }
+      const g=(r.out||'').trim(), e=String(l.expected).trim();
+      g===e?pass('Output: '+g):(brk(),flash('Output was:\n  '+(g||'(nothing printed)')+'\nExpected:\n  '+e,'fail'));
+    }).catch(e=>{ b.disabled=false; brk(); flash('💥 '+e,'fail'); }); }
+}
+function brk(){ streak=0; renderHUD(); }
+
+function runJS(u,t){ const logs=[]; const fc={log:(...a)=>logs.push(a.map(v=>typeof v==='string'?v:JSON.stringify(v)).join(' '))};
+  try{ const fn=new Function('console','return (async()=>{'+u+'\n;'+(t||'')+'\n})();'); return Promise.resolve(fn(fc)).then(()=>({logs})).catch(e=>({error:e.message,logs})); }
+  catch(e){ return Promise.resolve({error:e.message,logs}); } }
+async function runPy(u){ const py=await getPy(); py.globals.set('_src',u);
+  await py.runPythonAsync('import sys, io\n_b=io.StringIO(); _old=sys.stdout; sys.stdout=_b\n_err=""\ntry:\n    exec(_src, {})\nexcept Exception as e:\n    _err=str(e)\nfinally:\n    sys.stdout=_old\n_out=_b.getvalue()\n');
+  return { out: py.globals.get('_out')||'', error: py.globals.get('_err')||'' }; }
+
+function pass(extra){
+  const wasNew=!progress.cleared[cur.w+'-'+cur.l];
+  award(); if(wasNew) streak++;
+  const xp=WORLDS[cur.w].levels[cur.l].xp;
+  flash('✅ Correct! +'+xp+' XP'+(streak>1?'   🔥 '+streak+' streak!':'')+(extra?'\n'+extra:''),'pass');
+  const card=document.getElementById('card'); if(card){ card.classList.remove('win'); void card.offsetWidth; card.classList.add('win'); }
+  const f=document.getElementById('float'); if(f){ f.textContent='+'+xp; f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+  renderMap(); renderHUD();
+  const last=cur.l===WORLDS[cur.w].levels.length-1;
+  if(last && worldStatus(cur.w)==='done') setTimeout(worldModal,560);
+}
+function flash(msg,kind){ const o=document.getElementById('out'); if(!o) return; o.textContent=msg; o.className='out show '+(kind||'info'); }
+
+function worldModal(){
+  const fin=WORLDS.every((_,wi)=>worldStatus(wi)==='done');
+  document.getElementById('mIcon').textContent=fin?'🏆':'⭐';
+  document.getElementById('mTitle').textContent=fin?'AI MASTER — both tracks cleared!':'World cleared: '+WORLDS[cur.w].name;
+  document.getElementById('mBody').innerHTML=fin
+    ?'You ran real JavaScript and Python across the whole stack — from <code>git commit</code> to fine-tuning and serving a model. Now go ship the capstone. 🏛️'
+    :'Nice run! The next world just unlocked. Keep the streak alive.';
+  document.getElementById('modal').classList.add('show');
+}
+document.getElementById('mClose').onclick=()=>document.getElementById('modal').classList.remove('show');
+document.getElementById('prevBtn').onclick=()=>nav(-1);
+document.getElementById('nextBtn').onclick=()=>nav(1);
+document.getElementById('reviewBtn').onclick=nextUnsolved;
+document.getElementById('menuBtn').onclick=()=>document.getElementById('map').classList.toggle('open');
+document.getElementById('resetBtn').onclick=()=>{ if(confirm('Reset all progress, XP and streak?')){ progress={cleared:{},xp:0}; streak=0; save(); cur={w:0,l:0}; hintLevel=0; render(); } };
+document.addEventListener('keydown',e=>{ if(e.key==='Tab'&&e.target.id==='editor'){ e.preventDefault(); const t=e.target,s=t.selectionStart; t.value=t.value.slice(0,s)+'    '+t.value.slice(t.selectionEnd); t.selectionStart=t.selectionEnd=s+4; } });
+
+render();
+</script>
+</body>
+</html>
