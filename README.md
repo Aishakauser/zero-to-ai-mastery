@@ -203,6 +203,6 @@ Zero-to-AI-Mastery/
 
 Open `hub.html` in any modern browser to read the modules with diagrams rendered, or read the `modules/*.md` files directly on GitHub. Launch `game/index.html` to practice.
 
-## License & contributing
+## License
 
-Released under the MIT License — free to use, share, and adapt (see [`LICENSE`](LICENSE)). Issues and pull requests that improve clarity, fix errors, or add exercises are welcome.
+Released under the MIT License — free to use, share, and adapt (see [`LICENSE`](LICENSE)).

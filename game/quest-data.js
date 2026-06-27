@@ -1,4 +1,4 @@
-/* Quest data — 56 challenges across both tracks. Do not edit by hand. */
+/* Quest data — 62 challenges across both tracks. Do not edit by hand. */
 const TRACKS = [
 { label:"Foundations", cls:"", worlds:[
   { name:"00 · Setup & Tools", icon:"🧰", levels:[
@@ -57,6 +57,21 @@ const TRACKS = [
       brief:"You rarely touch the DOM in React.", q:"The UI updates because…",
       options:["You call getElementById","UI is a function of state; setState re-renders","The server pushes HTML","CSS animates it"], answer:1,
       hints:["UI = f(state).","Change state via its setter → React re-renders."] },
+  ]},
+]},
+  { name:"04 · Build a Web App", icon:"🏗️", levels:[
+    { type:'mcq', xp:10, title:"Sessions vs tokens", module:"04-Build-a-Web-App.md",
+      brief:"Your app needs to remember who's logged in between requests.", q:"Which auth approach is stateless?",
+      options:["Server-side session","Cookie only","JWT (JSON Web Token)","Browser localStorage"], answer:2,
+      hints:["Stateless = no server memory of sessions.","JWTs carry signed user info in the token; the server verifies, not stores."] },
+    { type:'mcq', xp:15, title:"Where secrets live", module:"04-Build-a-Web-App.md",
+      brief:"Your app needs a database password and an API key.", q:"The right place is…",
+      options:["Hardcoded in app.js","A .env file, excluded from git","The README","A comment in the code"], answer:1,
+      hints:["Would you commit your bank password?",".env + .gitignore keeps secrets off version control."] },
+    { type:'js', xp:20, title:"Protect a route (JS)", module:"04-Build-a-Web-App.md",
+      brief:"Write <code>requireAuth(user)</code> — return <code>'access'</code> if user.loggedIn is true, else <code>'denied'</code>.", task:"Handle both cases.",
+      starter:"function requireAuth(user){\n  // return 'access' or 'denied'\n}\n", test:"console.log(requireAuth({loggedIn:true}), requireAuth({loggedIn:false}));", expected:"access denied",
+      hints:["A simple conditional on user.loggedIn.","<code>return user.loggedIn ? 'access' : 'denied';</code>"] },
   ]},
 ]},
 { label:"Track A · Build WITH AI", cls:"a", worlds:[
@@ -198,6 +213,20 @@ const TRACKS = [
       brief:"'USB-C for AI tools.'", q:"An MCP server lets…",
       options:["Only one app use its tools","Any MCP client use the tools/data you expose","You train a model","You skip auth"], answer:1,
       hints:["It's a standard, not an app.","Any MCP-compatible client can call your server's tools."] },
+  ]},
+  { name:"12 · Capstone", icon:"🎓", levels:[
+    { type:'mcq', xp:20, title:"What production-ready means", module:"12-Capstone-AI-Assistant.md",
+      brief:"Your AI assistant works locally — but is it production-ready?", q:"Production-ready also requires…",
+      options:["A longer README","Tracing, evals, auth, and graceful failure handling","More comments","A bigger model"], answer:1,
+      hints:["Think reliability and observability.","Tracing + evals + auth + error handling — all wired together."] },
+    { type:'py', xp:20, title:"The readiness gate (Python)", module:"12-Capstone-AI-Assistant.md",
+      brief:"Ship only when all pillars are in place. Write <code>is_ready(has_trace, has_eval, has_auth)</code> → True only if all three are True.", task:"Print two cases.",
+      starter:"def is_ready(has_trace, has_eval, has_auth):\n    ...\n\nprint(is_ready(True,True,True), is_ready(True,False,True))\n", expected:"True False",
+      hints:["All three must be True.","<code>return has_trace and has_eval and has_auth</code>"] },
+    { type:'mcq', xp:15, title:"Eval-driven shipping", module:"12-Capstone-AI-Assistant.md",
+      brief:"You shipped v1. How do you know v2 is better?", q:"Evidence-based improvement means…",
+      options:["It feels faster","Run evals on a held-out set; gate on score regression","Ask one friend","Count the lines of code"], answer:1,
+      hints:["Vibes aren't a metric.","Score v1 vs v2 on a curated dataset; ship only if scores hold or improve."] },
   ]},
 ]},
 { label:"Track B · Make & Fine-tune AI", cls:"b", worlds:[

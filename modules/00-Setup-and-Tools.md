@@ -29,7 +29,7 @@ flowchart LR
 
 VS Code is a free editor from Microsoft. It's the industry default and what you'll use for everything in this course.
 
-1. Download from **code.visualstudio.com**, install, open it.
+1. Download from **[code.visualstudio.com](https://code.visualstudio.com)**, install, open it.
 2. Learn these four panels — you'll use them constantly:
 
 ```mermaid
